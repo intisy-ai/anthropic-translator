@@ -1,5 +1,6 @@
 package io.github.intisy.ai.ir.translators.anthropic;
 
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import io.github.intisy.ai.ir.spi.StreamDecoder;
 import io.github.intisy.ai.ir.stream.ContentBlockKind;
@@ -92,14 +93,14 @@ final class AnthropicStreamDecoder implements StreamDecoder {
         dataBuffer.setLength(0);
         sawDataLine = false;
         if (data.isEmpty()) return;
-        Map<String, Object> frame = AnthropicJsonUtil.asMap(json.parse(data));
+        Map<String, Object> frame = JsonUtil.asMap(json.parse(data));
         if (frame == null) return;
         IrStreamEvent event = decodeFrame(frame);
         if (event != null) out.add(event);
     }
 
     private IrStreamEvent decodeFrame(Map<String, Object> frame) {
-        String type = AnthropicJsonUtil.asString(frame.get("type"));
+        String type = JsonUtil.asString(frame.get("type"));
         if (type == null) return null;
         if ("message_start".equals(type)) return decodeMessageStart(frame);
         if ("content_block_start".equals(type)) return decodeContentBlockStart(frame);
@@ -113,12 +114,12 @@ final class AnthropicStreamDecoder implements StreamDecoder {
     }
 
     private IrStreamEvent decodeMessageStart(Map<String, Object> frame) {
-        Map<String, Object> message = AnthropicJsonUtil.asMap(frame.get("message"));
+        Map<String, Object> message = JsonUtil.asMap(frame.get("message"));
         if (message == null) return null;
         MessageStartEvent ev = new MessageStartEvent();
-        ev.id = AnthropicJsonUtil.asString(message.get("id"));
-        ev.model = AnthropicJsonUtil.asString(message.get("model"));
-        ev.role = AnthropicJsonUtil.asString(message.get("role"));
+        ev.id = JsonUtil.asString(message.get("id"));
+        ev.model = JsonUtil.asString(message.get("model"));
+        ev.role = JsonUtil.asString(message.get("role"));
         ev.usage = AnthropicUsageCodec.decode(message.get("usage"));
         for (Map.Entry<String, Object> e : message.entrySet()) {
             if (!MESSAGE_START_KNOWN_KEYS.contains(e.getKey())) {
@@ -130,13 +131,13 @@ final class AnthropicStreamDecoder implements StreamDecoder {
 
     private IrStreamEvent decodeContentBlockStart(Map<String, Object> frame) {
         ContentBlockStartEvent ev = new ContentBlockStartEvent();
-        ev.index = orZero(AnthropicJsonUtil.asInt(frame.get("index")));
-        Map<String, Object> block = AnthropicJsonUtil.asMap(frame.get("content_block"));
-        String blockType = block == null ? null : AnthropicJsonUtil.asString(block.get("type"));
+        ev.index = orZero(JsonUtil.asInt(frame.get("index")));
+        Map<String, Object> block = JsonUtil.asMap(frame.get("content_block"));
+        String blockType = block == null ? null : JsonUtil.asString(block.get("type"));
         if ("tool_use".equals(blockType)) {
             ev.blockKind = ContentBlockKind.TOOL_USE;
-            ev.toolUseId = AnthropicJsonUtil.asString(block.get("id"));
-            ev.toolName = AnthropicJsonUtil.asString(block.get("name"));
+            ev.toolUseId = JsonUtil.asString(block.get("id"));
+            ev.toolName = JsonUtil.asString(block.get("name"));
         } else if ("thinking".equals(blockType) || "redacted_thinking".equals(blockType)) {
             ev.blockKind = ContentBlockKind.THINKING;
         } else {
@@ -146,31 +147,31 @@ final class AnthropicStreamDecoder implements StreamDecoder {
     }
 
     private IrStreamEvent decodeContentBlockDelta(Map<String, Object> frame) {
-        int index = orZero(AnthropicJsonUtil.asInt(frame.get("index")));
-        Map<String, Object> delta = AnthropicJsonUtil.asMap(frame.get("delta"));
-        String deltaType = delta == null ? null : AnthropicJsonUtil.asString(delta.get("type"));
+        int index = orZero(JsonUtil.asInt(frame.get("index")));
+        Map<String, Object> delta = JsonUtil.asMap(frame.get("delta"));
+        String deltaType = delta == null ? null : JsonUtil.asString(delta.get("type"));
         if ("text_delta".equals(deltaType)) {
             TextDeltaEvent ev = new TextDeltaEvent();
             ev.index = index;
-            ev.text = AnthropicJsonUtil.asString(delta.get("text"));
+            ev.text = JsonUtil.asString(delta.get("text"));
             return ev;
         }
         if ("input_json_delta".equals(deltaType)) {
             ToolInputDeltaEvent ev = new ToolInputDeltaEvent();
             ev.index = index;
-            ev.partialJson = AnthropicJsonUtil.asString(delta.get("partial_json"));
+            ev.partialJson = JsonUtil.asString(delta.get("partial_json"));
             return ev;
         }
         if ("thinking_delta".equals(deltaType)) {
             ThinkingDeltaEvent ev = new ThinkingDeltaEvent();
             ev.index = index;
-            ev.text = AnthropicJsonUtil.asString(delta.get("thinking"));
+            ev.text = JsonUtil.asString(delta.get("thinking"));
             return ev;
         }
         if ("signature_delta".equals(deltaType)) {
             ThinkingSignatureEvent ev = new ThinkingSignatureEvent();
             ev.index = index;
-            ev.signature = AnthropicJsonUtil.asString(delta.get("signature"));
+            ev.signature = JsonUtil.asString(delta.get("signature"));
             return ev;
         }
         return null;
@@ -178,15 +179,15 @@ final class AnthropicStreamDecoder implements StreamDecoder {
 
     private IrStreamEvent decodeContentBlockStop(Map<String, Object> frame) {
         ContentBlockStopEvent ev = new ContentBlockStopEvent();
-        ev.index = orZero(AnthropicJsonUtil.asInt(frame.get("index")));
+        ev.index = orZero(JsonUtil.asInt(frame.get("index")));
         return ev;
     }
 
     private IrStreamEvent decodeMessageDelta(Map<String, Object> frame) {
         MessageDeltaEvent ev = new MessageDeltaEvent();
-        Map<String, Object> delta = AnthropicJsonUtil.asMap(frame.get("delta"));
+        Map<String, Object> delta = JsonUtil.asMap(frame.get("delta"));
         if (delta != null) {
-            ev.stopReason = AnthropicStopReason.toIr(AnthropicJsonUtil.asString(delta.get("stop_reason")));
+            ev.stopReason = AnthropicStopReason.toIr(JsonUtil.asString(delta.get("stop_reason")));
             putExtension(ev, EXT_STOP_SEQUENCE_RAW, delta.get("stop_sequence"));
             for (Map.Entry<String, Object> e : delta.entrySet()) {
                 if (!MESSAGE_DELTA_KNOWN_KEYS.contains(e.getKey())) {
@@ -205,10 +206,10 @@ final class AnthropicStreamDecoder implements StreamDecoder {
 
     private IrStreamEvent decodeError(Map<String, Object> frame) {
         ErrorEvent ev = new ErrorEvent();
-        Map<String, Object> error = AnthropicJsonUtil.asMap(frame.get("error"));
+        Map<String, Object> error = JsonUtil.asMap(frame.get("error"));
         if (error != null) {
-            ev.errorType = AnthropicJsonUtil.asString(error.get("type"));
-            ev.message = AnthropicJsonUtil.asString(error.get("message"));
+            ev.errorType = JsonUtil.asString(error.get("type"));
+            ev.message = JsonUtil.asString(error.get("message"));
         }
         return ev;
     }

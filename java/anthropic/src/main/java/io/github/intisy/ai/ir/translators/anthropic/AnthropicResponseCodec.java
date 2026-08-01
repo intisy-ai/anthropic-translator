@@ -1,6 +1,7 @@
 package io.github.intisy.ai.ir.translators.anthropic;
 
 import io.github.intisy.ai.ir.IrResponse;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.Arrays;
@@ -34,16 +35,16 @@ final class AnthropicResponseCodec {
             "id", "type", "role", "content", "model", "stop_reason", "stop_sequence", "usage"));
 
     static IrResponse decodeResponse(JsonCodec json, String wireJson) {
-        Map<String, Object> root = AnthropicJsonUtil.asMap(json.parse(wireJson));
+        Map<String, Object> root = JsonUtil.asMap(json.parse(wireJson));
         IrResponse r = new IrResponse();
         if (root == null) return r;
 
-        r.id = AnthropicJsonUtil.asString(root.get("id"));
-        r.model = AnthropicJsonUtil.asString(root.get("model"));
+        r.id = JsonUtil.asString(root.get("id"));
+        r.model = JsonUtil.asString(root.get("model"));
         r.content = AnthropicBlockCodec.decodeBlockList(root.get("content"));
         r.usage = AnthropicUsageCodec.decode(root.get("usage"));
 
-        String stopReasonRaw = AnthropicJsonUtil.asString(root.get("stop_reason"));
+        String stopReasonRaw = JsonUtil.asString(root.get("stop_reason"));
         r.stopReason = AnthropicStopReason.toIr(stopReasonRaw);
         putExtension(r, EXT_STOP_REASON_RAW, stopReasonRaw);
         putExtension(r, EXT_STOP_SEQUENCE_RAW, root.get("stop_sequence"));

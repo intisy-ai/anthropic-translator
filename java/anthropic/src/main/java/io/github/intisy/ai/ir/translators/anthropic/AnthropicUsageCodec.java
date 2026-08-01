@@ -1,6 +1,7 @@
 package io.github.intisy.ai.ir.translators.anthropic;
 
 import io.github.intisy.ai.ir.IrUsage;
+import io.github.intisy.ai.ir.json.JsonUtil;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,13 +12,13 @@ final class AnthropicUsageCodec {
     }
 
     static IrUsage decode(Object raw) {
-        Map<String, Object> m = AnthropicJsonUtil.asMap(raw);
+        Map<String, Object> m = JsonUtil.asMap(raw);
         if (m == null) return null;
         IrUsage u = new IrUsage();
-        u.inputTokens = AnthropicJsonUtil.asInt(m.get("input_tokens"));
-        u.outputTokens = AnthropicJsonUtil.asInt(m.get("output_tokens"));
-        u.cacheCreationInputTokens = AnthropicJsonUtil.asInt(m.get("cache_creation_input_tokens"));
-        u.cacheReadInputTokens = AnthropicJsonUtil.asInt(m.get("cache_read_input_tokens"));
+        u.inputTokens = JsonUtil.asInt(m.get("input_tokens"));
+        u.outputTokens = JsonUtil.asInt(m.get("output_tokens"));
+        u.cacheCreationInputTokens = JsonUtil.asInt(m.get("cache_creation_input_tokens"));
+        u.cacheReadInputTokens = JsonUtil.asInt(m.get("cache_read_input_tokens"));
         return u;
     }
 

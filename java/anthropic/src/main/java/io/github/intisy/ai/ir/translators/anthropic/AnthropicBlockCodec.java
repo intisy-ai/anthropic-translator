@@ -7,6 +7,7 @@ import io.github.intisy.ai.ir.ThinkingBlock;
 import io.github.intisy.ai.ir.ToolResultBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
 import io.github.intisy.ai.ir.UnknownBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,10 +52,10 @@ final class AnthropicBlockCodec {
     }
 
     static List<Block> decodeBlockList(Object raw) {
-        List<Object> list = AnthropicJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<Block> out = new ArrayList<>();
-        for (Object item : list) out.add(decodeBlock(AnthropicJsonUtil.asMap(item)));
+        for (Object item : list) out.add(decodeBlock(JsonUtil.asMap(item)));
         return out;
     }
 
@@ -75,7 +76,7 @@ final class AnthropicBlockCodec {
     @SuppressWarnings("unchecked")
     static Block decodeBlock(Map<String, Object> m) {
         if (m == null) return null;
-        String type = AnthropicJsonUtil.asString(m.get("type"));
+        String type = JsonUtil.asString(m.get("type"));
         if (!KNOWN_BLOCK_TYPES.contains(type)) {
             // A block type this codec has no typed model for (e.g. Anthropic's `document`, or any
             // future addition) -- stash it verbatim rather than throw, so a translator ahead of a
@@ -89,7 +90,7 @@ final class AnthropicBlockCodec {
         Block block;
         if ("text".equals(type)) {
             TextBlock t = new TextBlock();
-            t.text = AnthropicJsonUtil.asString(m.get("text"));
+            t.text = JsonUtil.asString(m.get("text"));
             consumed.add("text");
             block = t;
         } else if ("image".equals(type)) {
@@ -97,8 +98,8 @@ final class AnthropicBlockCodec {
             consumed.add("source");
         } else if ("tool_use".equals(type)) {
             ToolUseBlock t = new ToolUseBlock();
-            t.id = AnthropicJsonUtil.asString(m.get("id"));
-            t.name = AnthropicJsonUtil.asString(m.get("name"));
+            t.id = JsonUtil.asString(m.get("id"));
+            t.name = JsonUtil.asString(m.get("name"));
             t.input = m.get("input");
             consumed.addAll(Arrays.asList("id", "name", "input"));
             block = t;
@@ -107,8 +108,8 @@ final class AnthropicBlockCodec {
             consumed.addAll(Arrays.asList("tool_use_id", "is_error", "content"));
         } else if ("thinking".equals(type)) {
             ThinkingBlock t = new ThinkingBlock();
-            t.text = AnthropicJsonUtil.asString(m.get("thinking"));
-            t.signature = AnthropicJsonUtil.asString(m.get("signature"));
+            t.text = JsonUtil.asString(m.get("thinking"));
+            t.signature = JsonUtil.asString(m.get("signature"));
             consumed.addAll(Arrays.asList("thinking", "signature"));
             block = t;
         } else if ("redacted_thinking".equals(type)) {
@@ -133,14 +134,14 @@ final class AnthropicBlockCodec {
 
     private static Block decodeImageBlock(Map<String, Object> m) {
         ImageBlock img = new ImageBlock();
-        Map<String, Object> source = AnthropicJsonUtil.asMap(m.get("source"));
+        Map<String, Object> source = JsonUtil.asMap(m.get("source"));
         if (source != null) {
-            String sourceType = AnthropicJsonUtil.asString(source.get("type"));
+            String sourceType = JsonUtil.asString(source.get("type"));
             if ("base64".equals(sourceType)) {
-                img.mediaType = AnthropicJsonUtil.asString(source.get("media_type"));
-                img.data = AnthropicJsonUtil.asString(source.get("data"));
+                img.mediaType = JsonUtil.asString(source.get("media_type"));
+                img.data = JsonUtil.asString(source.get("data"));
             } else if ("url".equals(sourceType)) {
-                img.url = AnthropicJsonUtil.asString(source.get("url"));
+                img.url = JsonUtil.asString(source.get("url"));
             } else {
                 // e.g. Files-API "file" source -- no neutral field for it, keep it verbatim.
                 putExtension(img, EXT_IMAGE_SOURCE_RAW, source);
@@ -151,8 +152,8 @@ final class AnthropicBlockCodec {
 
     private static Block decodeToolResultBlock(Map<String, Object> m) {
         ToolResultBlock r = new ToolResultBlock();
-        r.toolUseId = AnthropicJsonUtil.asString(m.get("tool_use_id"));
-        r.isError = AnthropicJsonUtil.asBoolean(m.get("is_error"));
+        r.toolUseId = JsonUtil.asString(m.get("tool_use_id"));
+        r.isError = JsonUtil.asBoolean(m.get("is_error"));
         Object contentRaw = m.get("content");
         if (contentRaw instanceof String) {
             r.content = wrapStringAsBlocks((String) contentRaw);
@@ -164,9 +165,9 @@ final class AnthropicBlockCodec {
     }
 
     private static void decodeCacheControl(Map<String, Object> m, Block block) {
-        Map<String, Object> cc = AnthropicJsonUtil.asMap(m.get("cache_control"));
+        Map<String, Object> cc = JsonUtil.asMap(m.get("cache_control"));
         if (cc == null) return;
-        block.cacheControl = AnthropicJsonUtil.asString(cc.get("type"));
+        block.cacheControl = JsonUtil.asString(cc.get("type"));
         Map<String, Object> extra = new LinkedHashMap<>(cc);
         extra.remove("type");
         if (!extra.isEmpty()) {
@@ -209,7 +210,7 @@ final class AnthropicBlockCodec {
     private static void encodeImageBlock(ImageBlock img, Map<String, Object> m) {
         m.put("type", "image");
         Map<String, Object> rawSource = img.extensions == null ? null
-                : AnthropicJsonUtil.asMap(img.extensions.get(EXT_IMAGE_SOURCE_RAW));
+                : JsonUtil.asMap(img.extensions.get(EXT_IMAGE_SOURCE_RAW));
         if (rawSource != null) {
             m.put("source", rawSource);
         } else if (img.data != null) {
@@ -255,7 +256,7 @@ final class AnthropicBlockCodec {
         Map<String, Object> cc = new LinkedHashMap<>();
         cc.put("type", block.cacheControl);
         Map<String, Object> extra = block.extensions == null ? null
-                : AnthropicJsonUtil.asMap(block.extensions.get(EXT_CACHE_CONTROL_EXTRA));
+                : JsonUtil.asMap(block.extensions.get(EXT_CACHE_CONTROL_EXTRA));
         if (extra != null) cc.putAll(extra);
         m.put("cache_control", cc);
     }

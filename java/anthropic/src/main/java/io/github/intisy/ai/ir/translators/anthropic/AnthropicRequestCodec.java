@@ -6,6 +6,7 @@ import io.github.intisy.ai.ir.IrThinking;
 import io.github.intisy.ai.ir.IrTool;
 import io.github.intisy.ai.ir.IrToolChoice;
 import io.github.intisy.ai.ir.TextBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.ArrayList;
@@ -38,24 +39,24 @@ final class AnthropicRequestCodec {
             "top_p", "top_k", "stop_sequences", "stream", "thinking", "metadata"));
 
     static IrRequest decodeRequest(JsonCodec json, String wireJson) {
-        Map<String, Object> root = AnthropicJsonUtil.asMap(json.parse(wireJson));
+        Map<String, Object> root = JsonUtil.asMap(json.parse(wireJson));
         IrRequest r = new IrRequest();
         if (root == null) return r;
 
-        r.model = AnthropicJsonUtil.asString(root.get("model"));
-        r.maxTokens = AnthropicJsonUtil.asInt(root.get("max_tokens"));
-        r.temperature = AnthropicJsonUtil.asDouble(root.get("temperature"));
-        r.topP = AnthropicJsonUtil.asDouble(root.get("top_p"));
-        r.topK = AnthropicJsonUtil.asInt(root.get("top_k"));
+        r.model = JsonUtil.asString(root.get("model"));
+        r.maxTokens = JsonUtil.asInt(root.get("max_tokens"));
+        r.temperature = JsonUtil.asDouble(root.get("temperature"));
+        r.topP = JsonUtil.asDouble(root.get("top_p"));
+        r.topK = JsonUtil.asInt(root.get("top_k"));
         r.stopSequences = decodeStringList(root.get("stop_sequences"));
-        Boolean stream = AnthropicJsonUtil.asBoolean(root.get("stream"));
+        Boolean stream = JsonUtil.asBoolean(root.get("stream"));
         r.stream = stream != null && stream;
-        r.metadata = AnthropicJsonUtil.asMap(root.get("metadata"));
+        r.metadata = JsonUtil.asMap(root.get("metadata"));
 
         decodeSystem(root.get("system"), r);
         r.messages = decodeMessages(root.get("messages"));
         r.tools = decodeTools(root.get("tools"));
-        Map<String, Object> toolChoiceMap = AnthropicJsonUtil.asMap(root.get("tool_choice"));
+        Map<String, Object> toolChoiceMap = JsonUtil.asMap(root.get("tool_choice"));
         if (toolChoiceMap != null) r.toolChoice = decodeToolChoice(toolChoiceMap);
         decodeThinking(root.get("thinking"), r);
 
@@ -106,19 +107,19 @@ final class AnthropicRequestCodec {
     }
 
     private static void decodeThinking(Object thinkingRaw, IrRequest r) {
-        Map<String, Object> tm = AnthropicJsonUtil.asMap(thinkingRaw);
+        Map<String, Object> tm = JsonUtil.asMap(thinkingRaw);
         if (tm == null) return;
-        String thinkingType = AnthropicJsonUtil.asString(tm.get("type"));
+        String thinkingType = JsonUtil.asString(tm.get("type"));
         IrThinking thinking = new IrThinking();
         thinking.enabled = !"disabled".equals(thinkingType);
-        thinking.budgetTokens = AnthropicJsonUtil.asInt(tm.get("budget_tokens"));
+        thinking.budgetTokens = JsonUtil.asInt(tm.get("budget_tokens"));
         r.thinking = thinking;
         putRequestExtension(r, EXT_THINKING_TYPE, thinkingType);
     }
 
     private static void encodeThinking(IrRequest r, Map<String, Object> m) {
         Map<String, Object> tm = new LinkedHashMap<>();
-        String thinkingType = r.extensions == null ? null : AnthropicJsonUtil.asString(r.extensions.get(EXT_THINKING_TYPE));
+        String thinkingType = r.extensions == null ? null : JsonUtil.asString(r.extensions.get(EXT_THINKING_TYPE));
         if (thinkingType == null) thinkingType = r.thinking.enabled ? "enabled" : "disabled";
         tm.put("type", thinkingType);
         if (r.thinking.budgetTokens != null) tm.put("budget_tokens", r.thinking.budgetTokens);
@@ -126,17 +127,17 @@ final class AnthropicRequestCodec {
     }
 
     private static List<IrMessage> decodeMessages(Object raw) {
-        List<Object> list = AnthropicJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<IrMessage> out = new ArrayList<>();
-        for (Object item : list) out.add(decodeMessage(AnthropicJsonUtil.asMap(item)));
+        for (Object item : list) out.add(decodeMessage(JsonUtil.asMap(item)));
         return out;
     }
 
     private static IrMessage decodeMessage(Map<String, Object> mm) {
         if (mm == null) return null;
         IrMessage msg = new IrMessage();
-        msg.role = AnthropicJsonUtil.asString(mm.get("role"));
+        msg.role = JsonUtil.asString(mm.get("role"));
         Object contentRaw = mm.get("content");
         if (contentRaw instanceof String) {
             msg.content = AnthropicBlockCodec.wrapStringAsBlocks((String) contentRaw);
@@ -177,18 +178,18 @@ final class AnthropicRequestCodec {
     }
 
     private static List<IrTool> decodeTools(Object raw) {
-        List<Object> list = AnthropicJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<IrTool> out = new ArrayList<>();
-        for (Object item : list) out.add(decodeTool(AnthropicJsonUtil.asMap(item)));
+        for (Object item : list) out.add(decodeTool(JsonUtil.asMap(item)));
         return out;
     }
 
     private static IrTool decodeTool(Map<String, Object> tm) {
         if (tm == null) return null;
         IrTool t = new IrTool();
-        t.name = AnthropicJsonUtil.asString(tm.get("name"));
-        t.description = AnthropicJsonUtil.asString(tm.get("description"));
+        t.name = JsonUtil.asString(tm.get("name"));
+        t.description = JsonUtil.asString(tm.get("description"));
         t.inputSchema = tm.get("input_schema");
         for (Map.Entry<String, Object> e : tm.entrySet()) {
             String k = e.getKey();
@@ -219,8 +220,8 @@ final class AnthropicRequestCodec {
 
     private static IrToolChoice decodeToolChoice(Map<String, Object> tc) {
         IrToolChoice c = new IrToolChoice();
-        c.type = AnthropicJsonUtil.asString(tc.get("type"));
-        c.name = AnthropicJsonUtil.asString(tc.get("name"));
+        c.type = JsonUtil.asString(tc.get("type"));
+        c.name = JsonUtil.asString(tc.get("name"));
         for (Map.Entry<String, Object> e : tc.entrySet()) {
             String k = e.getKey();
             if (!"type".equals(k) && !"name".equals(k)) {
@@ -242,7 +243,7 @@ final class AnthropicRequestCodec {
     }
 
     private static List<String> decodeStringList(Object raw) {
-        List<Object> list = AnthropicJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<String> out = new ArrayList<>();
         for (Object item : list) out.add(String.valueOf(item));
