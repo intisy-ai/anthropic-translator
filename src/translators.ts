@@ -1,5 +1,5 @@
 import { loadAnthropicTranslator } from "./index.js";
-import { makeVendorTranslator } from "../core-ir/dist/index.js";
+import { makeVendorTranslator } from "@intisy-ai/core-ir";
 
 export const anthropicTranslator = makeVendorTranslator(loadAnthropicTranslator, {
   decodeRequest: (m) => m.anthropicDecodeRequest,
