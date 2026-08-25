@@ -17,8 +17,8 @@ flowchart LR
   RESP --> TR
   SSE --> TR
   IR[core-ir: IrRequest / IrResponse / IrStreamEvent] --> TR
-  TR -->|":anthropic" module| ANTHROPIC[java/anthropic]
-  ANTHROPIC -->|TeaVM generateJavaScript| GEN[java/teavm-anthropic build/generated/teavm/js]
+  TR -->|":anthropic" module| ANTHROPIC[anthropic]
+  ANTHROPIC -->|TeaVM generateJavaScript| GEN[teavm-anthropic build/generated/teavm/js]
   GEN -->|teavm-build.mjs stage| STAGED[src/generated/anthropic-translator.teavm.js]
   STAGED -->|tsc + esbuild| DIST[dist/index.js]
   DIST --> API["src/translators.ts: anthropicTranslator"]
@@ -28,7 +28,7 @@ flowchart LR
 `decodeResponse`/`encodeResponse`, and stateful `newStreamDecoder()`/`newStreamEncoder()` for true
 streaming (no buffer-and-reconvert). The `:anthropic` module holds the codecs and is
 zero-dependency, Java-8-clean; `:teavm-anthropic` is the TeaVM export surface over `:anthropic` and
-the nested `:ir` module, transpiled to a single JS bundle. The TS surface (`anthropicTranslator`)
+core-ir's `:ir` module, transpiled to a single JS bundle. The TS surface (`anthropicTranslator`)
 is a thin async wrapper over that generated JS, so callers never touch the TeaVM handle directly.
 
 ## Structure
@@ -45,30 +45,33 @@ is a thin async wrapper over that generated JS, so callers never touch the TeaVM
   (the `.js` itself is gitignored build output).
 - `src/__tests__/` - `smoke.test.ts` (toolchain round trip) and `translators.test.ts` (request and
   streamed-response round trips through the `TransformStream` helpers).
-- `java/anthropic/` - the Anthropic codecs (`AnthropicRequestCodec`, `AnthropicResponseCodec`,
+- `anthropic/` - the Anthropic codecs (`AnthropicRequestCodec`, `AnthropicResponseCodec`,
   `AnthropicStreamDecoder`, `AnthropicStreamEncoder`, `AnthropicBlockCodec`, `AnthropicUsageCodec`,
   `AnthropicStopReason`, `AnthropicJsonUtil`) plus `AnthropicTranslator`, the `Translator`
-  implementation that ties them together. Depends on the nested `core-ir`'s `:ir` module for the
+  implementation that ties them together. Depends on core-ir's `:ir` module for the
   IR types and the codec SPI.
-- `java/teavm-anthropic/` - the TeaVM JS export surface (`AnthropicTranslatorJs`), transpiling
+- `teavm-anthropic/` - the TeaVM JS export surface (`AnthropicTranslatorJs`), transpiling
   `:anthropic` and `:ir` to `anthropic-translator.js`.
-- `java/settings.gradle` / `java/build.gradle` / `java/gradlew*` - self-contained Gradle build
-  (Java 8 for `:anthropic`, Java 17 override for `:teavm-anthropic`), re-declaring the nested `:ir`
-  module's project path (Gradle settings do not nest across submodules).
+- `settings.gradle` / `build.gradle` / `gradlew*` - self-contained Gradle build
+  (Java 8 for `:anthropic`, Java 17 override for `:teavm-anthropic`), declaring core-ir's `:ir`
+  module as a github-gradle coordinate.
 
 ## Installation
 
-Via git submodule (the ecosystem convention for a `*-translator` repo consumed by a plugin):
+TypeScript, as a published npm package:
 
 ```bash
-git submodule add https://github.com/intisy-ai/anthropic-translator.git anthropic-translator
-git submodule update --init --recursive
+npm install @intisy-ai/anthropic-translator
 ```
 
-`anthropic-translator` itself nests `core-ir` as a submodule, so a recursive submodule update is
-required (`--init --recursive`, or `git submodule update --init --recursive` from the consuming
-repo's root) to pull both levels before building. It is a submodule-consumed library like
-`core-ir`/`core-proxy`, not an npm package, so there is no `npm install` step.
+Java, as a `github-gradle` coordinate resolving this repo's released `:anthropic` jar:
+
+```groovy
+githubImplementation "intisy-ai:anthropic-translator:1.1.0:anthropic"
+```
+
+No checkout of this repo or of `core-ir` is needed, or wanted: a nested checkout is a third
+resolver beside the package manifest and the build file, and it can disagree with both.
 
 ## Usage
 
