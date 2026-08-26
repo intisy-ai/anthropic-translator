@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/@intisy-ai/api/schema/plugin.schema.json",
+  "id": "anthropic-translator",
+  "api": 1,
+  "publish": {
+    "jarModule": [
+      "anthropic"
+    ]
+  },
+  "repo": {
+    "role": "Anthropic wire-format translator",
+    "category": "vendor-translator",
+    "domains": [
+      "anthropic"
+    ],
+    "tech": [
+      "java",
+      "teavm"
+    ]
+  }
+}
