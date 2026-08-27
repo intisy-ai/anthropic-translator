@@ -1,6 +1,13 @@
 import { loadAnthropicTranslator } from "./index.js";
 import { makeVendorTranslator } from "@intisy-ai/core-ir";
 
+/**
+ * The Anthropic translator, as every consumer takes it.
+ *
+ * @remarks
+ * Built by core-ir's `makeVendorTranslator`, so it loads the TeaVM module lazily on first use and
+ * carries the synchronous handles the Java routing engine reaches it through.
+ */
 export const anthropicTranslator = makeVendorTranslator(loadAnthropicTranslator, {
   decodeRequest: (m) => m.anthropicDecodeRequest,
   encodeRequest: (m) => m.anthropicEncodeRequest,
